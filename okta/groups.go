@@ -61,6 +61,7 @@ type Group struct {
 type GroupFilterOptions struct {
 	// This will be built by internal - may not need to export
 	FilterString  string   `url:"filter,omitempty"`
+	Q             string   `url:"q,omitempty"`
 	NextURL       *url.URL `url:"-"`
 	GetAllPages   bool     `url:"-"`
 	NumberOfPages int      `url:"-"`
@@ -77,6 +78,10 @@ func (g Group) String() string {
 	// return Stringify(g)
 	return fmt.Sprintf("Group:(ID: {%v} - Type: {%v} - Group Name: {%v})\n", g.ID, g.Type, g.Profile.Name)
 }
+
+//XXX Paging and Search (i.e. q param) are apparently mutually exclusive.  Need to
+//    fix this for OAuthClient and remove accounting for it, here.  Maybe just
+//    make a Search() method...
 
 // ListWithFilter - Method to list groups with different filter options.
 //  Pass in a GroupFilterOptions to specify filters. Values in that struct will turn into Query parameters

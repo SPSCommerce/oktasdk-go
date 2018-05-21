@@ -242,3 +242,47 @@ func (a *AppsService) GetUsers(appID string, opt *AppFilterOptions) (appUsers []
 
 	return appUsers, resp, err
 }
+
+type AppGroup struct {
+	ID          string    `json:"id"`
+	LastUpdated time.Time `json:"lastUpdated"`
+	Priority    float64   `json:"priority"`
+	Links       struct {
+		User struct {
+			Href string `json:"href"`
+		} `json:"user"`
+	} `json:"_links"`
+}
+
+func (a *AppsService) AssignGroupToApplication(appID string, groupID string, appGroup *AppGroup) (*AppGroup, *Response, error) {
+	u := fmt.Sprintf("apps/%v/groups/%v", appID, groupID)
+
+	req, err := a.client.NewRequest("PUT", u, appGroup)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	retAppGroup := new(AppGroup)
+	resp, err := a.client.Do(req, retAppGroup)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return retAppGroup, resp, err
+}
+
+func (a *AppsService) UnassignGroupToApplication(appID string, groupID string) (*Response, error) {
+	u := fmt.Sprintf("apps/%v/groups/%v", appID, groupID)
+
+	req, err := a.client.NewRequest("DELETE", u, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := a.client.Do(req, nil)
+	if err != nil {
+		return resp, err
+	}
+
+	return resp, nil
+}

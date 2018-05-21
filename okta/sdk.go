@@ -24,6 +24,7 @@ const (
 	productionDomain          = "okta.com"
 	previewDomain             = "oktapreview.com"
 	urlFormat                 = "https://%s.%s/api/v1/"
+	oauthUrlFormat            = "https://%s.%s/oauth/v1/"
 	headerRateLimit           = "X-Rate-Limit-Limit"
 	headerRateRemaining       = "X-Rate-Limit-Remaining"
 	headerRateReset           = "X-Rate-Limit-Reset"
@@ -86,6 +87,12 @@ type Client struct {
 
 	// Service for Working with Apps
 	Apps *AppsService
+
+	// Service for Working with Dynamic Clients (aka OAuth Clients)
+	Clients *OAuthClientsService
+
+	// Service for Working with Authorization Services
+	AuthZSvcs *AuthZSvcService
 }
 
 type service struct {
@@ -105,10 +112,33 @@ func NewClient(httpClient *http.Client, orgName string, apiToken string, isProdu
 	return client
 }
 
+// NewOAuthClient returns a new OKTA OAuth API client.  If a nil httpClient is
+// provided, http.DefaultClient will be used.
+func NewOAuthClient(httpClient *http.Client, orgName string, apiToken string, isProduction bool) *Client {
+	var baseDomain string
+	if isProduction {
+		baseDomain = productionDomain
+	} else {
+		baseDomain = previewDomain
+	}
+	client, _ := NewOAuthClientWithDomain(httpClient, orgName, baseDomain, apiToken)
+	return client
+}
+
 // NewClientWithDomain creates a client based on the organziation name and
 // base domain for requests (okta.com, okta-emea.com, oktapreview.com, etc).
 func NewClientWithDomain(httpClient *http.Client, orgName string, domain string, apiToken string) (*Client, error) {
 	baseURL, err := url.Parse(fmt.Sprintf(urlFormat, orgName, domain))
+	if err != nil {
+		return nil, err
+	}
+	return NewClientWithBaseURL(httpClient, baseURL, apiToken), nil
+}
+
+// NewOAuthClientWithDomain creates a client based on the organziation name and
+// base domain for requests (okta.com, okta-emea.com, oktapreview.com, etc).
+func NewOAuthClientWithDomain(httpClient *http.Client, orgName string, domain string, apiToken string) (*Client, error) {
+	baseURL, err := url.Parse(fmt.Sprintf(oauthUrlFormat, orgName, domain))
 	if err != nil {
 		return nil, err
 	}
@@ -137,6 +167,8 @@ func NewClientWithBaseURL(httpClient *http.Client, baseURL *url.URL, apiToken st
 	c.Users = (*UsersService)(&c.common)
 	c.Groups = (*GroupsService)(&c.common)
 	c.Apps = (*AppsService)(&c.common)
+	c.Clients = (*OAuthClientsService)(&c.common)
+	c.AuthZSvcs = (*AuthZSvcService)(&c.common)
 	return c
 }
 
@@ -359,6 +391,8 @@ type apiError struct {
 	ErrorCauses  []struct {
 		ErrorSummary string `json:"errorSummary"`
 	} `json:"errorCauses"`
+	Error            string `json:"error"`
+	ErrorDescription string `json:"error_description"`
 }
 
 type errorResponse struct {
@@ -367,8 +401,8 @@ type errorResponse struct {
 }
 
 func (r *errorResponse) Error() string {
-	return fmt.Sprintf("HTTP Method: %v - URL: %v: - HTTP Status Code: %d, OKTA Error Code: %v, OKTA Error Summary: %v, OKTA Error Causes: %v",
-		r.Response.Request.Method, r.Response.Request.URL, r.Response.StatusCode, r.ErrorDetail.ErrorCode, r.ErrorDetail.ErrorSummary, r.ErrorDetail.ErrorCauses)
+	return fmt.Sprintf("HTTP Method: %v - URL: %v: - HTTP Status Code: %d, OKTA Error Code: %v, OKTA Error Summary: %v, OKTA Error Causes: %v, OKTA OAuth Error: %v, OKTA OAuth Error Description: %v",
+		r.Response.Request.Method, r.Response.Request.URL, r.Response.StatusCode, r.ErrorDetail.ErrorCode, r.ErrorDetail.ErrorSummary, r.ErrorDetail.ErrorCauses, r.ErrorDetail.Error, r.ErrorDetail.ErrorDescription)
 }
 
 // RateLimitError occurs when OKTA returns 429 "Too Many Requests" response with a rate limit
