@@ -36,8 +36,12 @@ func (c *OAuthClientsService) Create(newClient OAuthClient) (*OAuthClient, *Resp
 		return nil, nil, err
 	}
 
-	//buf, _ := json.MarshalIndent(newClient, "", "  ")
-	//fmt.Printf("Create OAuth Client with this data: %s\n", buf)
+	//XXX
+	// var stuff map[string]interface{}
+	// body, _ := req.GetBody()
+	// json.NewDecoder(body).Decode(&stuff)
+	// buf1, _ := json.MarshalIndent(stuff, "", "  ")
+	// fmt.Printf("Create Authorization Service with this data: %s\n", buf1)
 
 	createdClient := new(OAuthClient)
 	resp, err := c.client.Do(req, createdClient)
@@ -45,8 +49,8 @@ func (c *OAuthClientsService) Create(newClient OAuthClient) (*OAuthClient, *Resp
 		return nil, resp, err
 	}
 
-	// buf, _ := json.MarshalIndent(createdClient, "", "  ")
-	// fmt.Printf("Created OAuth Client: %s\n", buf)
+	// buf2, _ := json.MarshalIndent(createdClient, "", "  ")
+	// fmt.Printf("Created OAuth Client: %s\n", buf2)
 
 	return createdClient, resp, nil
 }
@@ -159,4 +163,20 @@ func (c *OAuthClientsService) GetByID(clientId string) (*OAuthClient, *Response,
 	}
 
 	return client, resp, nil
+}
+
+func (c *OAuthClientsService) GenerateNewClientSecret(clientId string) (string, *Response, error) {
+	u := fmt.Sprintf("clients/%v/lifecycle/newSecret", clientId)
+	req, err := c.client.NewRequest("POST", u, nil)
+	if err != nil {
+		return "", nil, err
+	}
+
+	client := new(OAuthClient)
+	resp, err := c.client.Do(req, client)
+	if err != nil {
+		return "", resp, err
+	}
+
+	return client.ClientSecret, resp, nil
 }
